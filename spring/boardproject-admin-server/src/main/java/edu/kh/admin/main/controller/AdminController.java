@@ -1,16 +1,21 @@
 package edu.kh.admin.main.controller;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.SessionAttributes;
 
+import edu.kh.admin.main.model.dto.Board;
 import edu.kh.admin.main.model.dto.Member;
 import edu.kh.admin.main.model.service.AdminService;
 import jakarta.servlet.http.HttpSession;
@@ -18,7 +23,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:3000" /* allowCredentials = "true" */)
 @RequestMapping("admin")
 @RequiredArgsConstructor
 @Slf4j
@@ -76,5 +81,211 @@ public class AdminController {
 		}
 		
 	}
+	
+	
+	// --------------------복구--------------------
+	/** 탈퇴한 회원 목록 조회
+	 * @return
+	 */
+	@GetMapping("withdrawnMemberList")
+	public ResponseEntity<Object> selectWithdrwanMemberList() {
+		// 성공 시 List<Member> 반환, 실패 시 String 반환 -> Object 사용
+		// (참고) ResponseEntity<?> : 반환값을 특정할 수 없을때
+		
+		try {
+			List<Member> withdrawnMemberList = service.selectWithdrwanMemberList();
+			return ResponseEntity.status(HttpStatus.OK).body(withdrawnMemberList);
+			
+			
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("탈퇴한 회원 목록 조회 중 문제가 발생했습니다 : " + e.getMessage());
+			
+		}
+		
+	}
+	
+	
+	/** 탈퇴 회원 복구
+	 * @param member
+	 * @return
+	 */
+	@PutMapping("restoreMember")
+	public ResponseEntity<String> restoreMember(@RequestBody Member member) {
+		
+		try {
+			
+			int result = service.restoreMember(member.getMemberNo());
+			
+			if(result > 0) {
+				return ResponseEntity.status(HttpStatus.OK)
+						.body(member.getMemberNo() + " 회원 복구 완료");
+				
+			} else {
+				// result == 0
+				// -> 업데이트 된 행이 없음
+				// == 탈퇴하지 않았거나, memberNo를 잘못 보냄.
+				// 400 -> 요청 구문이 잘못되었거나 유효하지 않음.
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+						.body("유효하지 않은 memberNo : " + member.getMemberNo());
+				
+			}
+			
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("탈퇴 회원 복구 중 문제가 발생했습니다 : " + e.getMessage());
+			
+		}
+		
+	}
+	
+	
+	/** 삭제된 게시글 목록 조회
+	 * @return
+	 */
+	@GetMapping("deleteBoardList")
+	public ResponseEntity<Object> deleteBoardList() {
+		
+		try {
+			
+			List<Board> deleteBoardList = service.deleteBoardList();
+			return ResponseEntity.status(HttpStatus.OK).body(deleteBoardList);
+			
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("삭제된 게시글 조회 중 문제가 발생했습니다 : " + e.getMessage());
+			
+		}
+		
+	}
+	
+	
+	/** 삭제 게시글 복구
+	 * @param board
+	 * @return
+	 */
+	@PutMapping("resotreBoard")
+	public ResponseEntity<String> resotreBoard(@RequestBody Board board) {
+		
+		try {
+			
+			int result = service.restoreBoard(board.getBoardNo());
+			
+			if(result > 0) {
+				return ResponseEntity.status(HttpStatus.OK)
+						.body(board.getBoardNo() + " 게시글 복구 완료");
+				
+			} else {
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+						.body("유효하지 않은 boardNo : " + board.getBoardNo());
+				
+			}
+			
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("삭제 게시글 복구 중 문제가 발생했습니다 : " + e.getMessage());
+			
+		}
+		
+	}
+	
+	
+	// 새로운 가입 회원 조회
+	@GetMapping("newMember")
+	public ResponseEntity<List<Member>> getNewMember() {
+		try {
+			
+			List<Member> newMemberList = service.getNewMember();
+			return ResponseEntity.status(HttpStatus.OK).body(newMemberList);
+			
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+		}
+		
+	}
+	
+	
+	// 최대 조회 게시글
+	@GetMapping("maxReadCount")
+	public ResponseEntity<Object> maxReadCount() {
+		try {
+			
+			Board board = service.maxReadCount();
+			return ResponseEntity.status(HttpStatus.OK).body(board);
+			
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+		}
+	}
+	
+	
+	// 최대 좋아요 수 게시글
+	@GetMapping("maxLikeCount")
+	public ResponseEntity<Object> maxLikeCount() {
+		try {
+			
+			Board board = service.maxLikeCount();
+			return ResponseEntity.status(HttpStatus.OK).body(board);
+			
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+		}
+	}
+	
+	
+	// 최대 댓글수 게시글
+	@GetMapping("maxCommentCount")
+	public ResponseEntity<Object> maxCommentCount() {
+		try {
+			
+			Board board = service.maxCommentCount();
+			return ResponseEntity.status(HttpStatus.OK).body(board);
+			
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+		}
+	}
+	
+	
+	// 관리자 계정 목록 조회
+	@GetMapping("adminAccountList")
+	public ResponseEntity<Object> adminAccountList() {
+		try {
+			
+			List<Member> adminList = service.adminAccountList();
+			return ResponseEntity.status(HttpStatus.OK).body(adminList); 
+			
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+		}
+	}
+	
+	
+	// 관리자 계정 발급
+	@PostMapping("createAdminAccount")
+	public ResponseEntity<String> createAdminAccount(@RequestBody Member member) {
+		
+		try {
+			
+			String accountPw = service.createAdminAccount(member);
+			
+			if(accountPw != null) {
+				// 201(자원이 성공적으로 생성되었음을 나타냄)
+				return ResponseEntity.status(HttpStatus.CREATED).body(accountPw);
+				
+			} else {
+				// 204
+				return ResponseEntity.status(HttpStatus.NO_CONTENT).body(null);
+			
+			}
+			
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+			
+		}
+		
+	}
+	
+	
 	
 }
